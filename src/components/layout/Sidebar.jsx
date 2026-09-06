@@ -104,8 +104,9 @@ export function Sidebar({ onClose }) {
           justifyContent: 'space-between',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-            <img src="/icons/icon-192.png" alt="ShilpSetu" width={32} height={32}
+            <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="ShilpSetu" width={32} height={32}
               style={{ borderRadius: 8 }} />
+            <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="ShilpSetu" width={32} height={32} style={{ borderRadius: 8 }} />
             <div>
               <p style={{ fontWeight: 'var(--weight-bold)', color: 'var(--color-primary)', fontSize: 'var(--text-base)', margin: 0 }}>
                 ShilpSetu

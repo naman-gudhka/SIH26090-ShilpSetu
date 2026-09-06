@@ -80,7 +80,7 @@ export function SignUp() {
       <div style={cardStyle}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img src="/icons/icon-192.png" alt="ShilpSetu" width={36} height={36} style={{ borderRadius: 10 }} />
+            <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="ShilpSetu" width={36} height={36} style={{ borderRadius: 10 }} />
             <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-primary)' }}>ShilpSetu</span>
           </div>
           <LanguageSelector compact />

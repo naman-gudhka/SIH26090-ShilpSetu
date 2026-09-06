@@ -33,8 +33,7 @@ export function Welcome() {
     }}>
       {/* Logo */}
       <header style={{ display:'flex', alignItems:'center', gap:12 }}>
-        <img src="/icons/icon-192.png" alt="ShilpSetu" width={56} height={56}
-          style={{ borderRadius:16 }} />
+        <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="ShilpSetu" width={56} height={56} style={{ borderRadius: 16 }} />
         <span style={{ fontSize:'1.75rem', fontWeight:800, color:'var(--color-primary)', letterSpacing:'-0.5px' }}>
           ShilpSetu
         </span>

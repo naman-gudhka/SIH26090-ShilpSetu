@@ -24,7 +24,7 @@ export function LoadingState({ message = 'Loading…', fullPage = false }) {
         justifyContent: 'center', gap: 'var(--space-8)', zIndex: 9999,
       }}>
         <div style={{ textAlign: 'center' }}>
-          <img src="/icons/icon-192.png" alt="ShilpSetu" width={56} height={56} style={{ borderRadius: 14, margin: '0 auto' }} />
+          <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="ShilpSetu" width={56} height={56} style={{ borderRadius: 14, margin: '0 auto' }} />
           <p style={{ fontWeight: 'var(--weight-bold)', color: 'var(--color-primary)', marginTop: 'var(--space-2)' }}>ShilpSetu</p>
         </div>
         {spinner}

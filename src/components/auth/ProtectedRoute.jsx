@@ -20,7 +20,7 @@ export function ProtectedRoute({ children }) {
         background: 'var(--color-bg)',
       }}>
         <div style={{ textAlign: 'center' }}>
-          <img src="/icons/icon-192.png" alt="ShilpSetu" width={64} height={64} style={{ borderRadius: 16 }} />
+          <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="ShilpSetu" width={64} height={64} style={{ borderRadius: 16 }} />
           <p style={{ color: 'var(--color-text-muted)', marginTop: 16, fontSize: 'var(--text-sm)' }}>
             Loading ShilpSetu…
           </p>

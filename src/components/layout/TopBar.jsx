@@ -72,7 +72,7 @@ export function TopBar({ onMenuToggle, sidebarOpen }) {
         <Link to={role === 'artisan' ? '/artisan' : role === 'admin' ? '/admin' : '/buyer'}
           style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', textDecoration: 'none', minWidth: 0, flexShrink: 0 }}
         >
-          <img src="/icons/icon-192.png" alt="ShilpSetu" width={30} height={30}
+          <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="ShilpSetu" width={30} height={30}
             style={{ borderRadius: 8, flexShrink: 0 }} />
           <span className="topbar-brand-name" style={{
             fontWeight: 'var(--weight-bold)',

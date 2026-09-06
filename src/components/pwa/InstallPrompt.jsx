@@ -43,7 +43,7 @@ export function InstallPrompt() {
         }}><X size={14} /></button>
 
         <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 16 }}>
-          <img src="/icons/icon-192.png" alt="ShilpSetu" width={48} height={48}
+          <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="ShilpSetu" width={48} height={48}
             style={{ borderRadius: 12, border: '1px solid var(--color-border)', flexShrink: 0 }} />
           <div>
             <p style={{ fontWeight: 'var(--weight-semibold)', color: 'var(--color-text)', fontSize: 'var(--text-base)' }}>
@@ -95,7 +95,7 @@ export function InstallPrompt() {
         }}><X size={14} /></button>
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14 }}>
-          <img src="/icons/icon-192.png" alt="ShilpSetu" width={40} height={40}
+          <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="ShilpSetu" width={40} height={40}
             style={{ borderRadius: 10, flexShrink: 0 }} />
           <div>
             <p style={{ fontWeight: 'var(--weight-semibold)', color: 'var(--color-text)' }}>{t('pwa.installTitle')}</p>

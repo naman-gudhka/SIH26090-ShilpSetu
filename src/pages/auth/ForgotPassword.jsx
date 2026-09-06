@@ -43,7 +43,7 @@ export function ForgotPassword() {
       <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 16, boxShadow: '0 4px 24px rgba(15,118,110,0.08)', padding: '2rem 1.75rem', width: '100%', maxWidth: 400 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img src="/icons/icon-192.png" alt="ShilpSetu" width={36} height={36} style={{ borderRadius: 10 }} />
+            <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="ShilpSetu" width={36} height={36} style={{ borderRadius: 10 }} />
             <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-primary)' }}>ShilpSetu</span>
           </div>
           <LanguageSelector compact />

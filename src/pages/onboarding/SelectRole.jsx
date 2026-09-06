@@ -102,7 +102,7 @@ export function SelectRole() {
           }}
         >
           <img
-            src="/icons/icon-192.png"
+            src={`${import.meta.env.BASE_URL}icons/icon-192.png`}
             alt="ShilpSetu"
             width={36}
             height={36}
