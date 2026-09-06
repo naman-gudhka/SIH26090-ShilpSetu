@@ -3,6 +3,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
+  base: '/SIH26090-ShilpSetu/',
   plugins: [
     react(),
     VitePWA({
@@ -12,19 +13,20 @@ export default defineConfig({
         short_name: 'ShilpSetu',
         description:
           'AI-powered market linkage and smart cataloging for artisans',
-        start_url: '/',
+        start_url: '/SIH26090-ShilpSetu/',
+        scope: '/SIH26090-ShilpSetu/',
         display: 'standalone',
         orientation: 'portrait',
         theme_color: '#0F766E',
         background_color: '#FFFFFF',
         icons: [
           {
-            src: '/icons/icon-192.png',
+            src: 'icons/icon-192.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: '/icons/icon-512.png',
+            src: 'icons/icon-512.png',
             sizes: '512x512',
             type: 'image/png',
           },
