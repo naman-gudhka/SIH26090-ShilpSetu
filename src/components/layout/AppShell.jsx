@@ -148,6 +148,17 @@ export function AppShell({ children }) {
             padding-bottom: var(--space-8) !important;
           }
         }
+        @media (max-width: 1023px) {
+          #main-content {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+          }
+          #main-content::-webkit-scrollbar {
+            display: none;
+            width: 0;
+            height: 0;
+          }
+        }
       `}</style>
     </div>
   );

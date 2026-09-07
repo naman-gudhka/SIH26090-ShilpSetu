@@ -229,6 +229,7 @@ export function BuyerProfile() {
               </div>
             ) : (
               <div
+                className="buyer-products-grid"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',

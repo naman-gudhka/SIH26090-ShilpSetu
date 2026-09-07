@@ -181,6 +181,8 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: var(--weight-semibold);
   color: var(--color-text);
   line-height: 1.25;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .display {
@@ -577,6 +579,7 @@ h6 { font-size: var(--text-sm); }
 /* --- SCROLLBAR --- */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--color-border-light); }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: var(--radius-full); }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
 
@@ -661,6 +664,13 @@ body, html, #root {
   .buyer-home-footer {
     margin-bottom: calc(-1 * var(--space-8));
     padding-bottom: var(--space-8);
+  }
+}
+
+/* --- BUYER PRODUCT GRIDS (MOBILE 1 CARD PER ROW) --- */
+@media (max-width: 639px) {
+  .buyer-products-grid {
+    grid-template-columns: 1fr !important;
   }
 }
 

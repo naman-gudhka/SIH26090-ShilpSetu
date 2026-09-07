@@ -105,9 +105,8 @@ export function Sidebar({ onClose }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
             <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="ShilpSetu" width={32} height={32}
-              style={{ borderRadius: 8 }} />
-            <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="ShilpSetu" width={32} height={32} style={{ borderRadius: 8 }} />
-            <div>
+              style={{ borderRadius: 8, flexShrink: 0 }} />
+            <div style={{ minWidth: 0 }}>
               <p style={{ fontWeight: 'var(--weight-bold)', color: 'var(--color-primary)', fontSize: 'var(--text-base)', margin: 0 }}>
                 ShilpSetu
               </p>

@@ -158,6 +158,8 @@ export function ArtisanStore() {
     <div
       style={{
         minHeight: '100vh',
+        width: '100%',
+        boxSizing: 'border-box',
         background: 'var(--color-bg)',
         paddingBottom:
           'calc(var(--bottom-nav-height) + var(--space-6))',
@@ -171,6 +173,8 @@ export function ArtisanStore() {
           position: 'relative',
           overflow: 'hidden',
           boxShadow: '0 4px 20px rgba(10, 40, 36, 0.25)',
+          width: '100%',
+          boxSizing: 'border-box',
         }}
       >
         <div

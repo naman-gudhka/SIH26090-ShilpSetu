@@ -518,7 +518,7 @@ export function AdminInsights() {
               style={{
                 display: 'grid',
                 gridTemplateColumns:
-                  'repeat(auto-fit,minmax(300px,1fr))',
+                  'repeat(auto-fit,minmax(min(100%, 300px),1fr))',
                 gap: 20,
                 marginBottom: 28,
               }}

@@ -155,7 +155,7 @@ export function SelectRole() {
         aria-label="Select your role"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))',
+          gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%, 260px),1fr))',
           gap: 16,
           width: '100%',
           maxWidth: 880,

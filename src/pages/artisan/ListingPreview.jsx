@@ -138,7 +138,7 @@ export function ListingPreview() {
   }
 
   return (
-    <div style={{ minHeight:'100vh', background:'var(--color-bg)', paddingBottom:100 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--color-bg)', paddingBottom: 'calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom, 0px) + var(--space-8, 32px))' }}>
       {/* Top Bar */}
       <div style={{ background:'var(--color-surface)', borderBottom:'1px solid var(--color-border)', padding:'var(--space-4) var(--space-5)', display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:10 }}>
         <button onClick={() => navigate(-1)} style={{ display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer', color:'var(--color-text)', fontSize:'var(--text-sm)', fontWeight:600 }}>
@@ -152,7 +152,7 @@ export function ListingPreview() {
         </button>
       </div>
 
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: 'var(--space-6) var(--space-4)' }}>
+      <div className="listing-preview-container" style={{ maxWidth: 900, margin: '0 auto', padding: 'var(--space-6) var(--space-4)' }}>
         {/* Quality Banner Notice */}
         <div style={{
           background: 'var(--color-surface-teal)',
@@ -186,20 +186,18 @@ export function ListingPreview() {
         </div>
 
         {/* 2-Column Responsive Card Showcase */}
-        <div style={{
+        <div className="listing-preview-grid" style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-          gap: 28,
           background: 'var(--color-surface)',
           border: '1px solid var(--color-border)',
           borderRadius: 'var(--radius-xl)',
-          padding: 'var(--space-6)',
           boxShadow: 'var(--shadow-sm)',
         }}>
           {/* Left Column: Image & Authenticity Seals */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
             <div style={{
               width: '100%',
+              maxWidth: '100%',
               aspectRatio: '1 / 1',
               borderRadius: 'var(--radius-lg)',
               overflow: 'hidden',
@@ -259,7 +257,7 @@ export function ListingPreview() {
           </div>
 
           {/* Right Column: Narrative, Price & Specs */}
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: 0 }}>
             <div>
               {/* Craft badge & location */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
@@ -288,11 +286,25 @@ export function ListingPreview() {
               </div>
 
               {/* Title Bilingual */}
-              <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', color: 'var(--color-text)', margin: '0 0 6px', lineHeight: 1.3 }}>
+              <h2 style={{
+                fontSize: 'clamp(1.25rem, 4vw, 1.75rem)',
+                fontWeight: 'var(--weight-bold)',
+                color: 'var(--color-text)',
+                margin: '0 0 6px',
+                lineHeight: 1.3,
+                overflowWrap: 'break-word',
+                wordBreak: 'break-word',
+              }}>
                 {isHindi && catalog.titleHindi ? catalog.titleHindi : (catalog.title || catalog.productName)}
               </h2>
               {catalog.titleHindi && catalog.title && (
-                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', margin: '0 0 14px' }}>
+                <p style={{
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--color-text-muted)',
+                  margin: '0 0 14px',
+                  overflowWrap: 'break-word',
+                  wordBreak: 'break-word',
+                }}>
                   {isHindi ? catalog.title : catalog.titleHindi}
                 </p>
               )}
@@ -304,16 +316,17 @@ export function ListingPreview() {
                   background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: '#fff', fontSize: 13, fontWeight: 'var(--weight-bold)',
+                  flexShrink: 0,
                 }}>
                   {artisan?.name?.[0] || currentUser?.displayName?.[0] || 'A'}
                 </div>
-                <div>
-                  <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text)' }}>
+                <div style={{ minWidth: 0 }}>
+                  <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text)', display: 'block', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
                     {artisan?.name || currentUser?.displayName || 'Meera Devi'}
                   </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)' }}>
-                    <MapPin size={12} />
-                    <span>{artisan?.village || 'Madhubani'}{artisan?.state ? `, ${artisan.state}` : ''}</span>
+                    <MapPin size={12} flexShrink={0} />
+                    <span style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}>{artisan?.village || 'Madhubani'}{artisan?.state ? `, ${artisan.state}` : ''}</span>
                   </div>
                 </div>
               </div>
@@ -327,13 +340,15 @@ export function ListingPreview() {
                 display: 'flex',
                 alignItems: 'baseline',
                 justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 8,
                 marginBottom: 20,
               }}>
                 <div>
                   <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 2 }}>
                     {t('artisan.yourPrice')}
                   </span>
-                  <span style={{ fontSize: 'var(--text-3xl)', fontWeight: 'var(--weight-bold)', color: 'var(--color-primary)' }}>
+                  <span style={{ fontSize: 'clamp(1.5rem, 5vw, 1.875rem)', fontWeight: 'var(--weight-bold)', color: 'var(--color-primary)' }}>
                     ₹{Number(price).toLocaleString('en-IN')}
                   </span>
                 </div>
@@ -347,7 +362,14 @@ export function ListingPreview() {
                 <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text)', marginBottom: 6 }}>
                   {t('artisan.aboutThisProduct')}
                 </h3>
-                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', lineHeight: 1.7, margin: 0 }}>
+                <p style={{
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--color-text-muted)',
+                  lineHeight: 1.7,
+                  margin: 0,
+                  overflowWrap: 'break-word',
+                  wordBreak: 'break-word',
+                }}>
                   {isHindi && catalog.descriptionHindi
                     ? catalog.descriptionHindi
                     : (catalog.description || (isHindi ? 'पारंपरिक कारीगरों द्वारा हस्तनिर्मित उत्कृष्ट शिल्प।' : 'Authentic handcrafted artisanal creation made with traditional techniques.'))}
@@ -355,7 +377,12 @@ export function ListingPreview() {
               </div>
 
               {/* Specifications 2x2 grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 24 }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: 10,
+                marginBottom: 24,
+              }}>
                 {[
                   [t('artisan.materials'), catalog.materials || '—'],
                   [t('artisan.dimensions'), catalog.dimensions || '—'],
@@ -367,11 +394,21 @@ export function ListingPreview() {
                     border: '1px solid var(--color-border)',
                     borderRadius: 'var(--radius-md)',
                     padding: '8px 12px',
+                    minWidth: 0,
+                    overflow: 'hidden',
                   }}>
                     <span style={{ fontSize: 10, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
                       {lbl}
                     </span>
-                    <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text)', marginTop: 2, display: 'block' }}>
+                    <span style={{
+                      fontSize: 'var(--text-xs)',
+                      fontWeight: 600,
+                      color: 'var(--color-text)',
+                      marginTop: 2,
+                      display: 'block',
+                      overflowWrap: 'break-word',
+                      wordBreak: 'break-word',
+                    }}>
                       {val}
                     </span>
                   </div>
@@ -380,12 +417,13 @@ export function ListingPreview() {
             </div>
 
             {/* Action Bar */}
-            <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
+            <div style={{ display: 'flex', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
               <button
                 onClick={publish}
                 disabled={publishing}
                 style={{
-                  flex: 2,
+                  flex: '1 1 180px',
+                  minWidth: 0,
                   padding: '14px 20px',
                   background: 'var(--color-primary)',
                   color: '#fff',
@@ -410,7 +448,8 @@ export function ListingPreview() {
                 onClick={handleShare}
                 type="button"
                 style={{
-                  flex: 1,
+                  flex: '1 1 100px',
+                  minWidth: 0,
                   padding: '14px 16px',
                   background: 'var(--color-surface)',
                   color: 'var(--color-text)',
@@ -442,6 +481,33 @@ export function ListingPreview() {
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media (min-width: 768px) {
+          .listing-preview-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 28px !important;
+            padding: var(--space-6) !important;
+          }
+        }
+        @media (max-width: 767px) {
+          .listing-preview-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+            gap: 20px !important;
+            padding: var(--space-4) !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .listing-preview-container {
+            padding: var(--space-4) var(--space-3) !important;
+          }
+        }
+        @media (max-width: 360px) {
+          .listing-preview-grid {
+            padding: 12px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -382,6 +382,7 @@ export function ArtisanStory() {
           </div>
         ) : (
           <div
+            className="buyer-products-grid"
             role="list"
             aria-label={`Products by ${artisan.name}`}
             style={{

@@ -377,7 +377,14 @@ export function ProductDetail() {
               <span className="badge badge-accent" style={{ marginBottom: 'var(--space-3)', display: 'inline-flex' }}>
                 {product.craft}
               </span>
-              <h1 style={{ fontSize: 'var(--text-2xl)', lineHeight: 1.2, color: 'var(--color-text)', marginBottom: 'var(--space-3)' }}>
+              <h1 style={{
+                fontSize: 'var(--text-2xl)',
+                lineHeight: 1.2,
+                color: 'var(--color-text)',
+                marginBottom: 'var(--space-3)',
+                overflowWrap: 'break-word',
+                wordBreak: 'break-word',
+              }}>
                 {isHindi && product.titleHindi ? product.titleHindi : product.title}
               </h1>
               <p
@@ -409,6 +416,8 @@ export function ProductDetail() {
                         padding: 'var(--space-1) var(--space-3)',
                         fontSize: 'var(--text-sm)',
                         color: 'var(--color-text)',
+                        overflowWrap: 'break-word',
+                        wordBreak: 'break-word',
                       }}
                     >
                       {mat}
@@ -424,7 +433,13 @@ export function ProductDetail() {
                 <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {t('buyer.aboutThisPiece')}
                 </h2>
-                <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-text)', lineHeight: 1.7 }}>
+                <p style={{
+                  fontSize: 'var(--text-base)',
+                  color: 'var(--color-text)',
+                  lineHeight: 1.7,
+                  overflowWrap: 'break-word',
+                  wordBreak: 'break-word',
+                }}>
                   {isHindi && product.descriptionHindi ? product.descriptionHindi : product.description}
                 </p>
               </div>
@@ -435,7 +450,7 @@ export function ProductDetail() {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
+                  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
                   gap: 'var(--space-3)',
                 }}
               >
@@ -446,12 +461,20 @@ export function ProductDetail() {
                       border: '1px solid var(--color-border)',
                       borderRadius: 'var(--radius-md)',
                       padding: 'var(--space-3) var(--space-4)',
+                      minWidth: 0,
+                      overflow: 'hidden',
                     }}
                   >
                     <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-1)' }}>
                       {t('artisan.dimensions')}
                     </p>
-                    <p style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text)' }}>
+                    <p style={{
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--weight-semibold)',
+                      color: 'var(--color-text)',
+                      overflowWrap: 'break-word',
+                      wordBreak: 'break-word',
+                    }}>
                       {product.dimensions}
                     </p>
                   </div>
@@ -463,12 +486,20 @@ export function ProductDetail() {
                       border: '1px solid var(--color-border)',
                       borderRadius: 'var(--radius-md)',
                       padding: 'var(--space-3) var(--space-4)',
+                      minWidth: 0,
+                      overflow: 'hidden',
                     }}
                   >
                     <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-1)' }}>
                       {t('artisan.weight')}
                     </p>
-                    <p style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text)' }}>
+                    <p style={{
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--weight-semibold)',
+                      color: 'var(--color-text)',
+                      overflowWrap: 'break-word',
+                      wordBreak: 'break-word',
+                    }}>
                       {product.weight}
                     </p>
                   </div>

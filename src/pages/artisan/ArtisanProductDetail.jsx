@@ -226,7 +226,7 @@ export function ArtisanProductDetail() {
       style={{
         minHeight: '100dvh',
         background: 'var(--color-bg)',
-        paddingBottom: 100,
+        paddingBottom: 'calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom, 0px) + var(--space-8, 32px))',
         boxSizing: 'border-box',
       }}
     >
@@ -300,6 +300,7 @@ export function ArtisanProductDetail() {
       </div>
 
       <div
+        className="artisan-product-detail-container"
         style={{
           maxWidth: 900,
           margin: '0 auto',
@@ -420,22 +421,21 @@ export function ArtisanProductDetail() {
 
         {/* Main Product Layout */}
         <div
+          className="artisan-product-detail-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: 24,
             background: 'var(--color-surface)',
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-xl)',
-            padding: 'var(--space-6)',
             boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
           }}
         >
           {/* Product Image */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
             <div
               style={{
                 width: '100%',
+                maxWidth: '100%',
                 aspectRatio: '1 / 1',
                 borderRadius: 'var(--radius-lg)',
                 overflow: 'hidden',
@@ -457,7 +457,7 @@ export function ArtisanProductDetail() {
               )}
             </div>
             {product.images && product.images.length > 1 && (
-              <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
+              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', maxWidth: '100%' }}>
                 {product.images.map((img, idx) => (
                   <img
                     key={idx}
@@ -469,6 +469,7 @@ export function ArtisanProductDetail() {
                       borderRadius: 8,
                       objectFit: 'cover',
                       border: '1px solid var(--color-border)',
+                      flexShrink: 0,
                     }}
                   />
                 ))}
@@ -477,7 +478,7 @@ export function ArtisanProductDetail() {
           </div>
 
           {/* Product Info & Specs */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
             <div>
               <div
                 style={{
@@ -503,6 +504,8 @@ export function ArtisanProductDetail() {
                   color: 'var(--color-text)',
                   margin: '0 0 6px',
                   lineHeight: 1.3,
+                  overflowWrap: 'break-word',
+                  wordBreak: 'break-word',
                 }}
               >
                 {isHindi && product.titleHindi ? product.titleHindi : product.title}
@@ -513,6 +516,8 @@ export function ArtisanProductDetail() {
                     fontSize: 'var(--text-sm)',
                     color: 'var(--color-text-muted)',
                     margin: '0 0 12px',
+                    overflowWrap: 'break-word',
+                    wordBreak: 'break-word',
                   }}
                 >
                   {product.titleHindi}
@@ -520,7 +525,7 @@ export function ArtisanProductDetail() {
               )}
               <p
                 style={{
-                  fontSize: 'var(--text-2xl)',
+                  fontSize: 'clamp(1.5rem, 5vw, 1.875rem)',
                   fontWeight: 800,
                   color: 'var(--color-primary)',
                   margin: '8px 0',
@@ -552,6 +557,8 @@ export function ArtisanProductDetail() {
                   color: 'var(--color-text-muted)',
                   lineHeight: 1.6,
                   margin: 0,
+                  overflowWrap: 'break-word',
+                  wordBreak: 'break-word',
                 }}
               >
                 {isHindi && product.descriptionHindi
@@ -566,8 +573,8 @@ export function ArtisanProductDetail() {
                 borderTop: '1px solid var(--color-border-light)',
                 paddingTop: 16,
                 display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: 12,
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: 10,
               }}
             >
               {[
@@ -586,27 +593,46 @@ export function ArtisanProductDetail() {
                     : product.colors || 'Natural',
                 ],
               ].map(([k, v]) => (
-                <div key={k}>
-                  <p
+                <div
+                  key={k}
+                  style={{
+                    background: 'var(--color-bg)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '10px 12px',
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'flex-start',
+                  }}
+                >
+                  <span
                     style={{
-                      margin: 0,
-                      fontSize: 'var(--text-xs)',
+                      fontSize: 11,
                       color: 'var(--color-text-muted)',
                       fontWeight: 600,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                      display: 'block',
+                      marginBottom: 4,
                     }}
                   >
                     {k}
-                  </p>
-                  <p
+                  </span>
+                  <span
                     style={{
-                      margin: '2px 0 0',
                       fontSize: 'var(--text-sm)',
+                      fontWeight: 600,
                       color: 'var(--color-text)',
-                      fontWeight: 500,
+                      lineHeight: 1.4,
+                      display: 'block',
+                      overflowWrap: 'break-word',
+                      wordBreak: 'break-word',
                     }}
                   >
                     {v}
-                  </p>
+                  </span>
                 </div>
               ))}
             </div>
@@ -899,6 +925,33 @@ export function ArtisanProductDetail() {
           </div>
         </div>
       )}
+
+      <style>{`
+        @media (min-width: 768px) {
+          .artisan-product-detail-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 24px !important;
+            padding: var(--space-6) !important;
+          }
+        }
+        @media (max-width: 767px) {
+          .artisan-product-detail-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+            gap: 20px !important;
+            padding: var(--space-4) !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .artisan-product-detail-container {
+            padding: var(--space-4) var(--space-3) !important;
+          }
+        }
+        @media (max-width: 360px) {
+          .artisan-product-detail-grid {
+            padding: 12px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

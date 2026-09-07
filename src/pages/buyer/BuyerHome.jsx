@@ -286,6 +286,8 @@ export function BuyerHome() {
         </div>
 
         <div
+          id="featured-products-grid"
+          className="buyer-products-grid"
           role="list"
           aria-label="Featured products"
           style={{

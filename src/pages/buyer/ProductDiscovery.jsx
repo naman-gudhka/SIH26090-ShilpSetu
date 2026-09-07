@@ -365,8 +365,8 @@ export function ProductDiscovery() {
 
         @media (max-width: 599px) {
           #discovery-products-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: var(--space-3) !important;
+            grid-template-columns: 1fr !important;
+            gap: var(--space-4) !important;
           }
         }
         @media (min-width: 600px) and (max-width: 1023px) {
