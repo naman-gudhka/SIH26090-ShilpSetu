@@ -3,7 +3,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  base: '/SIH26090-ShilpSetu/',
+  base: '/',
   plugins: [
     react(),
     VitePWA({

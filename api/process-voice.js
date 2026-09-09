@@ -1,486 +1,347 @@
-import {
-  GoogleGenAI,
-  createUserContent,
-  createPartFromUri,
-} from '@google/genai';
+const MODEL = 'gemini-3.8-flash';
 
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import os from 'node:os';
-
-const TRANSCRIPTION_MODELS = [
-  'gemini-3.7-flash',
-  'gemini-3.6-flash',
-  'gemini-3.5-flash',
-];
-
-function sleep(ms) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
+function sendJson(res, status, data) {
+  res.status(status).json(data);
 }
 
-function isRetryableGeminiError(error) {
-  const message =
-    error?.message ||
-    error?.toString?.() ||
-    '';
-
-  const status =
-    error?.status ||
-    error?.code ||
-    '';
-
+function extractText(result) {
   return (
-    String(status) === '503' ||
-    String(status).includes('503') ||
-    message.includes('503') ||
-    message.includes('UNAVAILABLE') ||
-    message.includes('high demand') ||
-    message.includes('temporarily unavailable') ||
-    message.includes('overloaded')
+    result?.candidates?.[0]?.content?.parts
+      ?.map((part) => part?.text || '')
+      .join('')
+      .trim() || ''
   );
 }
 
-async function transcribeWithFallback(
-  ai,
-  audioFile,
-  mimeType
-) {
-  let lastError = null;
+function stripJsonMarkdown(text) {
+  if (!text) return '';
 
-  for (
-    let i = 0;
-    i < TRANSCRIPTION_MODELS.length;
-    i += 1
-  ) {
-    const model =
-      TRANSCRIPTION_MODELS[i];
+  return text
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+}
 
-    try {
-      console.log(
-        `Attempting voice transcription with ${model}...`
-      );
+async function callGemini(body) {
+  const apiKey = process.env.GEMINI_API_KEY;
 
-      const response =
-        await ai.models.generateContent({
-          model,
-
-          contents: createUserContent([
-            createPartFromUri(
-              audioFile.uri,
-              audioFile.mimeType ||
-                mimeType
-            ),
-
-            `Generate a complete and accurate transcript of the speech in this audio.
-
-Preserve the artisan's actual words and meaning.
-
-Do not summarize.
-
-Do not rewrite.
-
-Do not invent information.
-
-Return ONLY the transcript text.`,
-          ]),
-        });
-
-      const transcript =
-        response.text?.trim() || '';
-
-      if (transcript) {
-        console.log(
-          `Voice transcription succeeded with ${model}.`
-        );
-
-        return {
-          transcript,
-          model,
-        };
-      }
-
-      throw new Error(
-        `${model} returned an empty transcript.`
-      );
-    } catch (error) {
-      lastError = error;
-
-      console.error(
-        `Voice transcription failed with ${model}:`,
-        error
-      );
-
-      /*
-       * If this is a temporary availability
-       * problem, try the next model.
-       *
-       * For other errors, there is no point
-       * blindly trying unrelated models.
-       */
-      if (!isRetryableGeminiError(error)) {
-        throw error;
-      }
-
-      /*
-       * Small delay before moving to the
-       * next model.
-       */
-      if (
-        i <
-        TRANSCRIPTION_MODELS.length - 1
-      ) {
-        await sleep(1200);
-      }
-    }
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not configured on Vercel.');
   }
 
-  throw (
-    lastError ||
-    new Error(
-      'All Gemini transcription models are temporarily unavailable.'
-    )
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    }
   );
+
+  const text = await response.text();
+
+  if (!response.ok) {
+    console.error('Gemini API error:', response.status, text);
+
+    let message = `Gemini API returned ${response.status}.`;
+
+    try {
+      const errorJson = JSON.parse(text);
+      message =
+        errorJson?.error?.message ||
+        message;
+    } catch {
+      // Keep generic message.
+    }
+
+    throw new Error(message);
+  }
+
+  return JSON.parse(text);
 }
 
-export default async function handler(
-  req,
-  res
-) {
+export default async function handler(req, res) {
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    return res.status(204).end();
+  }
+
   if (req.method !== 'POST') {
-    return res.status(405).json({
+    return sendJson(res, 405, {
       success: false,
-      error:
-        'Method not allowed. Use POST.',
+      error: 'Method not allowed. Use POST.',
     });
   }
 
-  let tempFile = null;
-
   try {
-    const apiKey =
-      process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
-      return res.status(500).json({
-        success: false,
-        error:
-          'GEMINI_API_KEY is not configured on Vercel.',
-      });
-    }
-
     const {
       audioBase64,
       mimeType = 'audio/webm',
+      targetLanguage = 'auto',
     } = req.body || {};
 
     if (!audioBase64) {
-      return res.status(400).json({
+      return sendJson(res, 400, {
         success: false,
-        error:
-          'No audio data was provided.',
+        error: 'No audio was received.',
       });
     }
-
-    const audioBuffer =
-      Buffer.from(
-        audioBase64,
-        'base64'
-      );
-
-    if (!audioBuffer.length) {
-      return res.status(400).json({
-        success: false,
-        error:
-          'The recorded audio file is empty.',
-      });
-    }
-
-    if (
-      audioBuffer.length >
-      4 * 1024 * 1024
-    ) {
-      return res.status(413).json({
-        success: false,
-        error:
-          'Voice recording is too large. Please keep the recording under about 45 seconds.',
-      });
-    }
-
-    const ai =
-      new GoogleGenAI({
-        apiKey,
-      });
-
-    let extension = 'webm';
-
-    if (
-      mimeType.includes('mp4') ||
-      mimeType.includes('m4a')
-    ) {
-      extension = 'm4a';
-    } else if (
-      mimeType.includes('ogg')
-    ) {
-      extension = 'ogg';
-    } else if (
-      mimeType.includes('wav')
-    ) {
-      extension = 'wav';
-    } else if (
-      mimeType.includes('mp3')
-    ) {
-      extension = 'mp3';
-    }
-
-    tempFile = path.join(
-      os.tmpdir(),
-      `shilpsetu-voice-${Date.now()}.${extension}`
-    );
-
-    await fs.writeFile(
-      tempFile,
-      audioBuffer
-    );
-
-    console.log(
-      'Uploading artisan audio to Gemini:',
-      {
-        bytes: audioBuffer.length,
-        mimeType,
-      }
-    );
-
-    const audioFile =
-      await ai.files.upload({
-        file: tempFile,
-
-        config: {
-          mimeType,
-        },
-      });
-
-    if (!audioFile?.uri) {
-      throw new Error(
-        'Gemini did not return an uploaded audio URI.'
-      );
-    }
-
-    console.log(
-      'Gemini audio uploaded successfully:',
-      {
-        uri: audioFile.uri,
-        mimeType:
-          audioFile.mimeType,
-      }
-    );
 
     /*
-     * ------------------------------------------------
-     * STEP 1
-     * TRANSCRIBE AUDIO WITH MODEL FALLBACK
-     * ------------------------------------------------
+     * Vercel request bodies and browser base64 conversion add overhead.
+     * Keep recordings reasonably small for the hackathon demo.
      */
+    if (audioBase64.length > 5000000) {
+      return sendJson(res, 413, {
+        success: false,
+        error:
+          'Audio recording is too large. Please record a shorter voice note.',
+      });
+    }
 
-    const transcription =
-      await transcribeWithFallback(
-        ai,
-        audioFile,
-        mimeType
-      );
+    const cleanMimeType =
+      typeof mimeType === 'string' &&
+      mimeType.startsWith('audio/')
+        ? mimeType.split(';')[0]
+        : 'audio/webm';
 
-    const transcript =
-      transcription.transcript;
+    const transcriptionPrompt = `
+You are the speech-to-text engine for ShilpSetu, an Indian artisan marketplace.
 
-    console.log(
-      'Final transcript:',
-      transcript
-    );
+Listen to the attached artisan voice recording.
 
-    /*
-     * ------------------------------------------------
-     * STEP 2
-     * TRANSLATE + CLEAN STORY
-     * ------------------------------------------------
-     */
+Your job is to accurately transcribe exactly what the artisan said.
 
-    let parsed = {
-      detectedLanguage: 'unknown',
-      translationEnglish:
-        transcript,
-      translationHindi: '',
-      cleanedStory: transcript,
-    };
+IMPORTANT RULES:
 
-    try {
-      const translationResponse =
-        await ai.models.generateContent({
-          model:
-            'gemini-3.6-flash',
+1. Automatically detect the language being spoken.
+2. The artisan may speak Hindi, Marathi, Gujarati, Bengali, Tamil, Telugu, Kannada, Malayalam, Punjabi, Odia, Assamese, English, Hinglish, or another Indian language.
+3. Do NOT assume the language from the UI language.
+4. Preserve the artisan's actual meaning.
+5. Do not invent product details.
+6. Do not add craft names, materials, dimensions, locations, prices, colors, techniques, or cultural details unless the artisan actually says them.
+7. Do not summarize.
+8. Do not turn the speech into marketing language.
+9. If speech contains code-switching between languages, preserve the meaning accurately.
+10. If a word is unclear, use the closest supported interpretation but do not invent a new fact.
 
-          contents: `
-You are helping an Indian artisan create a product catalog.
+Return JSON only.
+`;
 
-The following is the actual transcript of the artisan speaking.
-
-Identify the language and provide faithful translations.
-
-Return:
-1. detectedLanguage
-2. translationEnglish
-3. translationHindi
-4. cleanedStory
-
-STRICT RULES:
-- Preserve the artisan's actual meaning.
-- Do NOT invent product information.
-- Do NOT assume Kutch.
-- Do NOT assume Gujarat.
-- Do NOT assume embroidery.
-- Do NOT assume a bag.
-- Do NOT assume cotton.
-- Do NOT assume mirror work.
-- Do NOT assume wood.
-- Do NOT assume pottery.
-- Do NOT add materials, colors, dimensions, techniques,
-  locations, prices, or other facts that the artisan
-  did not actually say.
-
-The cleanedStory should be polished but factually faithful.
-
-Return ONLY valid JSON.
-
-ARTISAN TRANSCRIPT:
-${transcript}
-          `,
-
-          config: {
-            responseMimeType:
-              'application/json',
-
-            responseSchema: {
-              type: 'object',
-
-              properties: {
-                detectedLanguage: {
-                  type: 'string',
-                },
-
-                translationEnglish: {
-                  type: 'string',
-                },
-
-                translationHindi: {
-                  type: 'string',
-                },
-
-                cleanedStory: {
-                  type: 'string',
-                },
+    const transcriptionResult = await callGemini({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: transcriptionPrompt,
+            },
+            {
+              inlineData: {
+                mimeType: cleanMimeType,
+                data: audioBase64,
               },
-
-              required: [
-                'detectedLanguage',
-                'translationEnglish',
-                'translationHindi',
-                'cleanedStory',
-              ],
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            transcript: {
+              type: 'STRING',
+            },
+            detectedLanguage: {
+              type: 'STRING',
+            },
+            confidence: {
+              type: 'NUMBER',
             },
           },
-        });
+          required: [
+            'transcript',
+            'detectedLanguage',
+            'confidence',
+          ],
+        },
+      },
+    });
 
-      const raw =
-        translationResponse.text?.trim() ||
-        '';
+    const transcriptionText = extractText(transcriptionResult);
 
-      if (raw) {
-        const result =
-          JSON.parse(raw);
-
-        parsed = {
-          detectedLanguage:
-            result.detectedLanguage ||
-            'unknown',
-
-          translationEnglish:
-            result.translationEnglish ||
-            transcript,
-
-          translationHindi:
-            result.translationHindi ||
-            '',
-
-          cleanedStory:
-            result.cleanedStory ||
-            result.translationEnglish ||
-            transcript,
-        };
-      }
-    } catch (translationError) {
-      /*
-       * Translation is helpful but should NOT
-       * destroy the voice workflow if the
-       * translation model is temporarily busy.
-       *
-       * We already have the real transcript,
-       * so continue with it.
-       */
-      console.warn(
-        'Translation step failed. Continuing with original transcript:',
-        translationError
+    if (!transcriptionText) {
+      throw new Error(
+        'Gemini did not return a transcription.'
       );
     }
 
-    return res.status(200).json({
+    let transcription;
+
+    try {
+      transcription = JSON.parse(
+        stripJsonMarkdown(transcriptionText)
+      );
+    } catch (error) {
+      console.error(
+        'Could not parse transcription JSON:',
+        transcriptionText
+      );
+
+      throw new Error(
+        'Gemini returned an invalid transcription response.'
+      );
+    }
+
+    const transcript =
+      typeof transcription.transcript === 'string'
+        ? transcription.transcript.trim()
+        : '';
+
+    if (!transcript) {
+      throw new Error(
+        'No understandable speech was detected in the recording.'
+      );
+    }
+
+    const detectedLanguage =
+      transcription.detectedLanguage ||
+      targetLanguage ||
+      'unknown';
+
+    /*
+     * Now translate the actual transcript.
+     */
+    const translationPrompt = `
+You are the translation and artisan-story processing engine for ShilpSetu.
+
+Original detected language:
+${detectedLanguage}
+
+Original transcript:
+${transcript}
+
+Create accurate English and Hindi translations.
+
+Also create a cleaned artisan story.
+
+STRICT RULES:
+
+1. Do not invent information.
+2. Do not add materials that were not mentioned.
+3. Do not add location information that was not mentioned.
+4. Do not add craft techniques that were not mentioned.
+5. Do not add dimensions or weight.
+6. Do not add prices.
+7. Do not add claims such as "traditional", "eco-friendly", "100% authentic", "GI tagged", "sustainable", etc. unless the artisan actually said them.
+8. Preserve the artisan's actual meaning.
+9. The cleaned story may improve grammar and readability but must not introduce new facts.
+10. If something was not mentioned, leave it out.
+
+Return JSON only.
+`;
+
+    const translationResult = await callGemini({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: translationPrompt,
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            translationEnglish: {
+              type: 'STRING',
+            },
+            translationHindi: {
+              type: 'STRING',
+            },
+            cleanedStory: {
+              type: 'STRING',
+            },
+          },
+          required: [
+            'translationEnglish',
+            'translationHindi',
+            'cleanedStory',
+          ],
+        },
+      },
+    });
+
+    const translationText = extractText(
+      translationResult
+    );
+
+    if (!translationText) {
+      throw new Error(
+        'Gemini did not return translation data.'
+      );
+    }
+
+    let translation;
+
+    try {
+      translation = JSON.parse(
+        stripJsonMarkdown(translationText)
+      );
+    } catch {
+      throw new Error(
+        'Gemini returned an invalid translation response.'
+      );
+    }
+
+    return sendJson(res, 200, {
       success: true,
 
       transcript,
 
-      translation:
-        parsed.translationEnglish ||
-        transcript,
+      language: detectedLanguage,
+
+      detectedLanguage,
+
+      confidence:
+        Number(transcription.confidence) || 0.9,
 
       translationEnglish:
-        parsed.translationEnglish ||
+        translation.translationEnglish ||
         transcript,
 
       translationHindi:
-        parsed.translationHindi ||
+        translation.translationHindi ||
         '',
 
       cleanedStory:
-        parsed.cleanedStory ||
-        parsed.translationEnglish ||
+        translation.cleanedStory ||
+        translation.translationEnglish ||
         transcript,
 
-      language:
-        parsed.detectedLanguage ||
-        'unknown',
-
-      confidence: null,
-
-      transcriptionModel:
-        transcription.model,
+      source: 'gemini',
     });
   } catch (error) {
     console.error(
-      'Voice processing error:',
+      'Voice processing failed:',
       error
     );
 
-    return res.status(500).json({
+    return sendJson(res, 500, {
       success: false,
-
       error:
         error?.message ||
-        'Unable to process the artisan voice recording.',
+        'Unable to process the voice recording.',
     });
-  } finally {
-    if (tempFile) {
-      await fs
-        .unlink(tempFile)
-        .catch(() => {});
-    }
   }
 }

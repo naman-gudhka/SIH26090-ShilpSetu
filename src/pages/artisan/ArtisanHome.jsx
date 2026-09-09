@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useNetwork } from '../../context/NetworkContext.jsx';
 import { useLanguage } from '../../context/LanguageContext.jsx';
-import { Camera, Mic, Package, Clock, CheckCircle, ChevronRight, Store, TrendingUp, MessageSquare, ExternalLink } from 'lucide-react';
+import { Camera, Package, Clock, CheckCircle, ChevronRight, Store, TrendingUp, MessageSquare, ExternalLink, ArrowRight } from 'lucide-react';
 import { productService } from '../../services/productService.js';
 import { enquiryService } from '../../services/enquiryService.js';
 import { artisanService } from '../../services/artisanService.js';
@@ -279,61 +279,34 @@ export function ArtisanHome() {
             {t('nav.addProduct')}
           </h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
             <button
               onClick={() => navigate('/artisan/products/photo')}
               style={{
-                background: 'rgba(255,255,255,0.15)',
-                border: '1.5px solid rgba(255,255,255,0.3)',
+                background: 'rgba(255,255,255,0.2)',
+                border: '1.5px solid rgba(255,255,255,0.4)',
                 borderRadius: 'var(--radius-md)',
                 padding: 'var(--space-4)',
                 color: '#fff',
                 cursor: 'pointer',
                 display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-                gap: 'var(--space-2)',
+                alignItems: 'center',
+                gap: 'var(--space-3)',
                 transition: 'all var(--transition-fast)',
                 backdropFilter: 'blur(4px)',
+                width: '100%',
               }}
             >
               <Camera size={22} />
-              <div>
-                <p style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)' }}>
+              <div style={{ textAlign: 'left', flex: 1 }}>
+                <p style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)', margin: 0 }}>
                   {t('artisan.takePhoto')}
                 </p>
-                <p style={{ fontSize: 11, opacity: 0.75 }}>
-                  {isHindi ? 'अपनी कला की फ़ोटो लें' : 'Show us your craft'}
+                <p style={{ fontSize: 11, opacity: 0.75, margin: 0 }}>
+                  {isHindi ? 'फ़ोटो → कहानी → AI — एक-एक कदम' : 'Photo → Story → AI — step by step'}
                 </p>
               </div>
-            </button>
-
-            <button
-              onClick={() => navigate('/artisan/products/voice')}
-              style={{
-                background: 'rgba(255,255,255,0.15)',
-                border: '1.5px solid rgba(255,255,255,0.3)',
-                borderRadius: 'var(--radius-md)',
-                padding: 'var(--space-4)',
-                color: '#fff',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-                gap: 'var(--space-2)',
-                transition: 'all var(--transition-fast)',
-                backdropFilter: 'blur(4px)',
-              }}
-            >
-              <Mic size={22} />
-              <div>
-                <p style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)' }}>
-                  {t('artisan.useVoice')}
-                </p>
-                <p style={{ fontSize: 11, opacity: 0.75 }}>
-                  {isHindi ? 'बोलकर विवरण जोड़ें' : 'Tell us your story'}
-                </p>
-              </div>
+              <ArrowRight size={16} style={{ opacity: 0.8 }} />
             </button>
           </div>
         </div>
