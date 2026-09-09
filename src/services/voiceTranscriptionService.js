@@ -1,68 +1,234 @@
-/**
- * voiceTranscriptionService.js
- * Speech-to-text abstraction boundary.
- * Replace mock with: Bhashini API / Google Speech-to-Text / Azure Cognitive Services
- */
+const API_URL = '/api/process-voice';
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function blobToBase64(blob) {
+  return new Promise(
+    (resolve, reject) => {
+      const reader =
+        new FileReader();
 
-const mockTranscripts = {
-  hi: 'यह एक हाथ से बुना हुआ कपड़ा बैग है जो गुजरात के कच्छ जिले में बनाया गया है। इसमें पारंपरिक दर्पण का काम और रंगीन धागे की कढ़ाई है। एक बैग बनाने में लगभग चालीस घंटे का समय लगता है।',
-  en: 'This is a handwoven cotton bag made by hand in Kutch, Gujarat. It has traditional mirror work and colorful thread embroidery. It takes about forty hours to make one bag. The cotton used is locally sourced and the thread colors are natural dyes.',
-};
+      reader.onloadend = () => {
+        try {
+          const result =
+            reader.result;
+
+          if (
+            typeof result !==
+            'string'
+          ) {
+            reject(
+              new Error(
+                'Unable to read audio data.'
+              )
+            );
+
+            return;
+          }
+
+          const commaIndex =
+            result.indexOf(',');
+
+          const base64 =
+            commaIndex >= 0
+              ? result.slice(
+                  commaIndex + 1
+                )
+              : result;
+
+          if (!base64) {
+            reject(
+              new Error(
+                'Invalid audio data.'
+              )
+            );
+
+            return;
+          }
+
+          resolve(base64);
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      reader.onerror = () => {
+        reject(
+          new Error(
+            'Unable to read audio recording.'
+          )
+        );
+      };
+
+      reader.readAsDataURL(blob);
+    }
+  );
+}
 
 export const voiceTranscriptionService = {
-  /**
-   * Transcribe audio to text.
-   * Replace with: Bhashini API (https://bhashini.gov.in/) or equivalent
-   * @param {Blob} audioBlob - The recorded audio
-   * @param {string} language - Language code ('hi', 'en', 'gu', etc.)
-   * @returns {Promise<Object>} Transcription result
-   */
-  async transcribe(audioBlob, language = 'hi') {
-    await delay(2500);
-    // Mock: In production, send audioBlob to Bhashini or other STT API
+  async transcribe(
+    audioBlob,
+    language = 'en'
+  ) {
+    if (
+      !audioBlob ||
+      audioBlob.size === 0
+    ) {
+      throw new Error(
+        'No audio recording was provided.'
+      );
+    }
+
+    const audioBase64 =
+      await blobToBase64(
+        audioBlob
+      );
+
+    const response =
+      await fetch(API_URL, {
+        method: 'POST',
+
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+
+        body: JSON.stringify({
+          audioBase64,
+
+          mimeType:
+            audioBlob.type ||
+            'audio/webm',
+
+          targetLanguage:
+            language,
+        }),
+      });
+
+    let data;
+
+    try {
+      data =
+        await response.json();
+    } catch {
+      throw new Error(
+        'The voice server returned an invalid response.'
+      );
+    }
+
+    if (
+      !response.ok ||
+      !data.success
+    ) {
+      throw new Error(
+        data?.error ||
+          'Unable to process the voice recording.'
+      );
+    }
+
     return {
       success: true,
-      transcript: mockTranscripts[language] || mockTranscripts.en,
-      confidence: 0.91,
-      language,
-      duration: 8.4,
+
+      transcript:
+        data.transcript || '',
+
+      confidence:
+        data.confidence ??
+        null,
+
+      language:
+        data.language ||
+        language,
+
+      translation:
+        data.translation ||
+        data.translationEnglish ||
+        '',
+
+      translationEnglish:
+        data.translationEnglish ||
+        data.translation ||
+        '',
+
+      translationHindi:
+        data.translationHindi ||
+        '',
+
+      cleanedStory:
+        data.cleanedStory ||
+        data.translationEnglish ||
+        '',
     };
   },
 
-  /**
-   * Translate text between languages.
-   * Replace with: Bhashini translation API or Google Translate
-   */
-  async translate(text, fromLang, toLang) {
-    await delay(1000);
-    if (fromLang === toLang) return { success: true, translation: text };
+  async translate(
+    text,
+    fromLang,
+    toLang
+  ) {
+    if (!text) {
+      return {
+        success: true,
+        translation: '',
+        fromLang,
+        toLang,
+      };
+    }
+
+    if (
+      fromLang === toLang
+    ) {
+      return {
+        success: true,
+        translation: text,
+        fromLang,
+        toLang,
+      };
+    }
+
+    /*
+     * Translation is currently handled
+     * inside /api/process-voice through Gemini.
+     *
+     * Keep this method for compatibility
+     * with the existing frontend service contract.
+     */
     return {
       success: true,
-      translation: toLang === 'hi' ? mockTranscripts.hi : mockTranscripts.en,
+      translation: text,
       fromLang,
       toLang,
     };
   },
 
-  /**
-   * Check if the browser supports MediaRecorder / audio capture.
-   */
   isSupported() {
-    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    return Boolean(
+      navigator.mediaDevices
+        ?.getUserMedia
+    );
   },
 
-  /**
-   * Request microphone permission.
-   */
   async requestPermission() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((t) => t.stop());
-      return { granted: true };
+      const stream =
+        await navigator.mediaDevices
+          .getUserMedia({
+            audio: true,
+          });
+
+      stream
+        .getTracks()
+        .forEach((track) =>
+          track.stop()
+        );
+
+      return {
+        granted: true,
+      };
     } catch {
-      return { granted: false, error: 'Microphone permission denied.' };
+      return {
+        granted: false,
+        error:
+          'Microphone permission denied.',
+      };
     }
   },
 };
