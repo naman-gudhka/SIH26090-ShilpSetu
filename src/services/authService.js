@@ -329,14 +329,17 @@ return { user, role };
    * Sign out.
    * Replace with: signOut(auth)
    */
-  async signOut() {
-    await delay(300);
-    mockUser = null;
-    mockRole = null;
-    persistState(null, null);
-    listeners.forEach((cb) => cb(null));
-    return { success: true };
-  },
+async signOut() {
+  await firebaseSignOut(auth);
+
+  mockUser = null;
+  mockRole = null;
+  persistState(null, null);
+
+  listeners.forEach((cb) => cb(null));
+
+  return { success: true };
+},
 
   /**
    * Update user profile.
