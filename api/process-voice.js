@@ -8,18 +8,159 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 
-export default async function handler(req, res) {
+const TRANSCRIPTION_MODELS = [
+  'gemini-3.7-flash',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+];
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function isRetryableGeminiError(error) {
+  const message =
+    error?.message ||
+    error?.toString?.() ||
+    '';
+
+  const status =
+    error?.status ||
+    error?.code ||
+    '';
+
+  return (
+    String(status) === '503' ||
+    String(status).includes('503') ||
+    message.includes('503') ||
+    message.includes('UNAVAILABLE') ||
+    message.includes('high demand') ||
+    message.includes('temporarily unavailable') ||
+    message.includes('overloaded')
+  );
+}
+
+async function transcribeWithFallback(
+  ai,
+  audioFile,
+  mimeType
+) {
+  let lastError = null;
+
+  for (
+    let i = 0;
+    i < TRANSCRIPTION_MODELS.length;
+    i += 1
+  ) {
+    const model =
+      TRANSCRIPTION_MODELS[i];
+
+    try {
+      console.log(
+        `Attempting voice transcription with ${model}...`
+      );
+
+      const response =
+        await ai.models.generateContent({
+          model,
+
+          contents: createUserContent([
+            createPartFromUri(
+              audioFile.uri,
+              audioFile.mimeType ||
+                mimeType
+            ),
+
+            `Generate a complete and accurate transcript of the speech in this audio.
+
+Preserve the artisan's actual words and meaning.
+
+Do not summarize.
+
+Do not rewrite.
+
+Do not invent information.
+
+Return ONLY the transcript text.`,
+          ]),
+        });
+
+      const transcript =
+        response.text?.trim() || '';
+
+      if (transcript) {
+        console.log(
+          `Voice transcription succeeded with ${model}.`
+        );
+
+        return {
+          transcript,
+          model,
+        };
+      }
+
+      throw new Error(
+        `${model} returned an empty transcript.`
+      );
+    } catch (error) {
+      lastError = error;
+
+      console.error(
+        `Voice transcription failed with ${model}:`,
+        error
+      );
+
+      /*
+       * If this is a temporary availability
+       * problem, try the next model.
+       *
+       * For other errors, there is no point
+       * blindly trying unrelated models.
+       */
+      if (!isRetryableGeminiError(error)) {
+        throw error;
+      }
+
+      /*
+       * Small delay before moving to the
+       * next model.
+       */
+      if (
+        i <
+        TRANSCRIPTION_MODELS.length - 1
+      ) {
+        await sleep(1200);
+      }
+    }
+  }
+
+  throw (
+    lastError ||
+    new Error(
+      'All Gemini transcription models are temporarily unavailable.'
+    )
+  );
+}
+
+export default async function handler(
+  req,
+  res
+) {
   if (req.method !== 'POST') {
     return res.status(405).json({
       success: false,
-      error: 'Method not allowed. Use POST.',
+      error:
+        'Method not allowed. Use POST.',
     });
   }
 
   let tempFile = null;
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey =
+      process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
       return res.status(500).json({
@@ -37,28 +178,25 @@ export default async function handler(req, res) {
     if (!audioBase64) {
       return res.status(400).json({
         success: false,
-        error: 'No audio data was provided.',
+        error:
+          'No audio data was provided.',
       });
     }
 
-    const audioBuffer = Buffer.from(
-      audioBase64,
-      'base64'
-    );
+    const audioBuffer =
+      Buffer.from(
+        audioBase64,
+        'base64'
+      );
 
     if (!audioBuffer.length) {
       return res.status(400).json({
         success: false,
-        error: 'The recorded audio file is empty.',
+        error:
+          'The recorded audio file is empty.',
       });
     }
 
-    /*
-     * Keep this endpoint focused on short artisan voice notes.
-     *
-     * This protects the Vercel function from
-     * unexpectedly large uploads.
-     */
     if (
       audioBuffer.length >
       4 * 1024 * 1024
@@ -70,21 +208,31 @@ export default async function handler(req, res) {
       });
     }
 
-    const ai = new GoogleGenAI({
-      apiKey,
-    });
+    const ai =
+      new GoogleGenAI({
+        apiKey,
+      });
 
-    const extension =
+    let extension = 'webm';
+
+    if (
       mimeType.includes('mp4') ||
       mimeType.includes('m4a')
-        ? 'm4a'
-        : mimeType.includes('ogg')
-          ? 'ogg'
-          : mimeType.includes('wav')
-            ? 'wav'
-            : mimeType.includes('mp3')
-              ? 'mp3'
-              : 'webm';
+    ) {
+      extension = 'm4a';
+    } else if (
+      mimeType.includes('ogg')
+    ) {
+      extension = 'ogg';
+    } else if (
+      mimeType.includes('wav')
+    ) {
+      extension = 'wav';
+    } else if (
+      mimeType.includes('mp3')
+    ) {
+      extension = 'mp3';
+    }
 
     tempFile = path.join(
       os.tmpdir(),
@@ -97,17 +245,17 @@ export default async function handler(req, res) {
     );
 
     console.log(
-      'Uploading artisan audio to Gemini Files API:',
+      'Uploading artisan audio to Gemini:',
       {
         bytes: audioBuffer.length,
         mimeType,
-        tempFile,
       }
     );
 
     const audioFile =
       await ai.files.upload({
         file: tempFile,
+
         config: {
           mimeType,
         },
@@ -120,144 +268,167 @@ export default async function handler(req, res) {
     }
 
     console.log(
-      'Gemini audio uploaded:',
+      'Gemini audio uploaded successfully:',
       {
         uri: audioFile.uri,
-        mimeType: audioFile.mimeType,
+        mimeType:
+          audioFile.mimeType,
       }
     );
 
     /*
-     * Gemini audio understanding.
-     *
-     * The model receives the actual recorded
-     * artisan audio and generates the transcript.
+     * ------------------------------------------------
+     * STEP 1
+     * TRANSCRIBE AUDIO WITH MODEL FALLBACK
+     * ------------------------------------------------
      */
+
     const transcription =
-      await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-
-        contents: createUserContent([
-          createPartFromUri(
-            audioFile.uri,
-            audioFile.mimeType ||
-              mimeType
-          ),
-
-          'Generate a complete and accurate transcript of the speech in this audio. Preserve the artisan\'s actual words and meaning. Return only the transcript text. Do not summarize, rewrite, or invent anything.',
-        ]),
-      });
+      await transcribeWithFallback(
+        ai,
+        audioFile,
+        mimeType
+      );
 
     const transcript =
-      transcription.text?.trim() || '';
+      transcription.transcript;
 
     console.log(
-      'Gemini transcript:',
+      'Final transcript:',
       transcript
     );
 
-    if (!transcript) {
-      throw new Error(
-        'Gemini did not return a transcript. Please check the microphone recording and try again.'
-      );
-    }
-
     /*
-     * Translate and clean the transcript.
-     *
-     * IMPORTANT:
-     * Gemini is explicitly told not to invent
-     * product information.
+     * ------------------------------------------------
+     * STEP 2
+     * TRANSLATE + CLEAN STORY
+     * ------------------------------------------------
      */
-    const translationResponse =
-      await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
 
-        contents: `
+    let parsed = {
+      detectedLanguage: 'unknown',
+      translationEnglish:
+        transcript,
+      translationHindi: '',
+      cleanedStory: transcript,
+    };
+
+    try {
+      const translationResponse =
+        await ai.models.generateContent({
+          model:
+            'gemini-3.6-flash',
+
+          contents: `
 You are helping an Indian artisan create a product catalog.
 
 The following is the actual transcript of the artisan speaking.
 
-First identify the language of the transcript.
+Identify the language and provide faithful translations.
 
-Then return:
-1. A faithful English translation.
-2. A faithful Hindi translation.
-3. A polished English catalog story.
+Return:
+1. detectedLanguage
+2. translationEnglish
+3. translationHindi
+4. cleanedStory
 
 STRICT RULES:
-- Preserve every factual detail from the transcript.
+- Preserve the artisan's actual meaning.
 - Do NOT invent product information.
-- Do NOT assume Kutch, Gujarat, embroidery, bags, cotton,
-  mirror work, wood, pottery, or any other product detail.
-- Do not change quantities, materials, colors, locations,
-  techniques, or time requirements.
-- Keep Indian craft names and place names accurate.
-- The polished English story must remain factual.
+- Do NOT assume Kutch.
+- Do NOT assume Gujarat.
+- Do NOT assume embroidery.
+- Do NOT assume a bag.
+- Do NOT assume cotton.
+- Do NOT assume mirror work.
+- Do NOT assume wood.
+- Do NOT assume pottery.
+- Do NOT add materials, colors, dimensions, techniques,
+  locations, prices, or other facts that the artisan
+  did not actually say.
 
-Return ONLY valid JSON in this exact structure:
-{
-  "detectedLanguage": "...",
-  "translationEnglish": "...",
-  "translationHindi": "...",
-  "cleanedStory": "..."
-}
+The cleanedStory should be polished but factually faithful.
+
+Return ONLY valid JSON.
 
 ARTISAN TRANSCRIPT:
 ${transcript}
-        `,
+          `,
 
-        config: {
-          responseMimeType:
-            'application/json',
+          config: {
+            responseMimeType:
+              'application/json',
 
-          responseSchema: {
-            type: 'object',
+            responseSchema: {
+              type: 'object',
 
-            properties: {
-              detectedLanguage: {
-                type: 'string',
+              properties: {
+                detectedLanguage: {
+                  type: 'string',
+                },
+
+                translationEnglish: {
+                  type: 'string',
+                },
+
+                translationHindi: {
+                  type: 'string',
+                },
+
+                cleanedStory: {
+                  type: 'string',
+                },
               },
 
-              translationEnglish: {
-                type: 'string',
-              },
-
-              translationHindi: {
-                type: 'string',
-              },
-
-              cleanedStory: {
-                type: 'string',
-              },
+              required: [
+                'detectedLanguage',
+                'translationEnglish',
+                'translationHindi',
+                'cleanedStory',
+              ],
             },
-
-            required: [
-              'detectedLanguage',
-              'translationEnglish',
-              'translationHindi',
-              'cleanedStory',
-            ],
           },
-        },
-      });
+        });
 
-    const raw =
-      translationResponse.text?.trim() ||
-      '';
+      const raw =
+        translationResponse.text?.trim() ||
+        '';
 
-    let parsed;
+      if (raw) {
+        const result =
+          JSON.parse(raw);
 
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      console.error(
-        'Invalid Gemini translation JSON:',
-        raw
-      );
+        parsed = {
+          detectedLanguage:
+            result.detectedLanguage ||
+            'unknown',
 
-      throw new Error(
-        'Gemini returned invalid translation data.'
+          translationEnglish:
+            result.translationEnglish ||
+            transcript,
+
+          translationHindi:
+            result.translationHindi ||
+            '',
+
+          cleanedStory:
+            result.cleanedStory ||
+            result.translationEnglish ||
+            transcript,
+        };
+      }
+    } catch (translationError) {
+      /*
+       * Translation is helpful but should NOT
+       * destroy the voice workflow if the
+       * translation model is temporarily busy.
+       *
+       * We already have the real transcript,
+       * so continue with it.
+       */
+      console.warn(
+        'Translation step failed. Continuing with original transcript:',
+        translationError
       );
     }
 
@@ -288,6 +459,9 @@ ${transcript}
         'unknown',
 
       confidence: null,
+
+      transcriptionModel:
+        transcription.model,
     });
   } catch (error) {
     console.error(
