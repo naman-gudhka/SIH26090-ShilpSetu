@@ -1,3 +1,15 @@
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged as firebaseOnAuthStateChanged,
+  signOut as firebaseSignOut,
+  sendPasswordResetEmail,
+  sendEmailVerification as firebaseSendEmailVerification,
+  updateProfile as firebaseUpdateProfile,
+} from 'firebase/auth';
+
+import { auth, db } from '../firebase.js';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 /**
  * authService.js
  * Firebase Authentication abstraction boundary.
@@ -137,80 +149,124 @@ export const authService = {
    * Subscribe to auth state changes.
    * Replace with: firebase.auth().onAuthStateChanged(callback)
    */
+  
   onAuthStateChanged(callback) {
-    listeners.push(callback);
-    // Immediately invoke with current state
-    callback(mockUser);
-    return () => {
-      const idx = listeners.indexOf(callback);
-      if (idx > -1) listeners.splice(idx, 1);
-    };
+    return firebaseOnAuthStateChanged(auth, (user) => {
+      callback(user);
+    });
   },
 
   /**
    * Sign in with email and password.
    * Replace with: signInWithEmailAndPassword(auth, email, password)
    */
-  async signInWithEmail(email, password) {
-    await delay(600);
-    const cleanEmail = normalizeEmail(email);
-    if (!cleanEmail || !password) {
-      throw new Error('Please enter your email and password.');
-    }
-    if (!isValidEmail(cleanEmail)) {
-      throw new Error('Please enter a valid email address.');
-    }
-    if (password.length < 6) {
-      throw new Error('Incorrect password. Please try again.');
+async signInWithEmail(email, password) {
+  const cleanEmail = normalizeEmail(email);
+
+  if (!cleanEmail || !password) {
+    throw new Error('Please enter your email and password.');
+  }
+
+  if (!isValidEmail(cleanEmail)) {
+    throw new Error('Please enter a valid email address.');
+  }
+
+  try {
+    const credential = await signInWithEmailAndPassword(
+      auth,
+      cleanEmail,
+      password
+    );
+
+    const user = credential.user;
+    
+
+    // Keep the existing Team 1 return contract.
+    // Role will be resolved from the user's saved role later.
+    
+    const savedRole = localStorage.getItem(`shilpsetu_role_${user.uid}`);
+
+let role = savedRole || null;
+
+if (!role) {
+  const userDoc = await getDoc(doc(db, 'users', user.uid));
+
+  if (userDoc.exists()) {
+    role = userDoc.data().role || null;
+  }
+}
+
+return { user, role };
+
+  } catch (error) {
+    // Keep UI-friendly errors instead of exposing Firebase internals.
+    if (
+      error.code === 'auth/invalid-credential' ||
+      error.code === 'auth/wrong-password' ||
+      error.code === 'auth/user-not-found'
+    ) {
+      throw new Error('Incorrect email or password. Please try again.');
     }
 
-    const isAdmin = cleanEmail.includes('admin');
-    const isBuyer = cleanEmail.includes('buyer') || cleanEmail.includes('customer');
-    const assignedRole = isAdmin ? 'admin' : (isBuyer ? 'buyer' : (mockRole || 'artisan'));
+    if (error.code === 'auth/too-many-requests') {
+      throw new Error('Too many login attempts. Please try again later.');
+    }
 
-    mockUser = {
-      uid: isAdmin ? 'mock-admin-uid' : 'mock-uid-' + cleanEmail.replace(/[^a-z0-9]/g, ''),
-      email: cleanEmail,
-      displayName: cleanEmail.split('@')[0].replace('.', ' '),
-      emailVerified: true,
-      photoURL: null,
-      isAdminDemo: isAdmin,
-    };
-
-    persistState(mockUser, assignedRole);
-    listeners.forEach((cb) => cb(mockUser));
-    return { user: mockUser, role: assignedRole };
-  },
+    throw new Error(error.message || 'Unable to sign in. Please try again.');
+  }
+},
 
   /**
    * Create a new account.
    * Replace with: createUserWithEmailAndPassword(auth, email, password)
    */
   async createAccount(email, password, displayName) {
-    await delay(600);
     const cleanEmail = normalizeEmail(email);
-    if (!cleanEmail || !password || !displayName) {
+    const cleanName = typeof displayName === 'string' ? displayName.trim() : '';
+
+    if (!cleanEmail || !password || !cleanName) {
       throw new Error('All fields are required.');
     }
+
     if (!isValidEmail(cleanEmail)) {
       throw new Error('Please enter a valid email address.');
     }
+
     if (password.length < 8) {
       throw new Error('Password must be at least 8 characters.');
     }
 
-    mockUser = {
-      uid: 'mock-uid-' + cleanEmail.replace(/[^a-z0-9]/g, ''),
-      email: cleanEmail,
-      displayName: displayName.trim(),
-      emailVerified: false,
-      photoURL: null,
-    };
+    try {
+      const credential = await createUserWithEmailAndPassword(
+        auth,
+        cleanEmail,
+        password
+      );
 
-    mockRole = null;
-    persistState(mockUser, null);
-    listeners.forEach((cb) => cb(mockUser));
-    return { user: mockUser };
+      const user = credential.user;
+
+      await firebaseUpdateProfile(user, {
+        displayName: cleanName,
+      });
+
+      return { user };
+    } catch (error) {
+      if (error.code === 'auth/email-already-in-use') {
+        throw new Error('An account with this email already exists.');
+      }
+
+      if (error.code === 'auth/invalid-email') {
+        throw new Error('Please enter a valid email address.');
+      }
+
+      if (error.code === 'auth/weak-password') {
+        throw new Error('Password is too weak. Please use a stronger password.');
+      }
+
+      throw new Error(
+        error.message || 'Unable to create your account. Please try again.'
+      );
+    }
   },
 
   /**
@@ -240,13 +296,32 @@ export const authService = {
    * Replace with: setDoc(doc(db, 'users', uid), { role }, { merge: true })
    */
   async setUserRole(role) {
-    await delay(300);
-    mockRole = role;
-    // In production: write to Firestore users/{uid} document
-    // Admin role must be validated/granted by backend Firebase Admin SDK
-    if (mockUser) {
-      persistState(mockUser, role);
+    const user = auth.currentUser;
+
+    if (!user) {
+      throw new Error('You must be signed in to select a role.');
     }
+
+    const allowedRoles = ['artisan', 'buyer'];
+
+    if (!allowedRoles.includes(role)) {
+      throw new Error('Invalid role selected.');
+    }
+
+    console.log('FIRESTORE ROLE WRITE START', user.uid, role);
+
+    await setDoc(
+      doc(db, 'users', user.uid),
+      {
+        uid: user.uid,
+        email: user.email || null,
+        displayName: user.displayName || null,
+        role,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+
     return { success: true, role };
   },
 

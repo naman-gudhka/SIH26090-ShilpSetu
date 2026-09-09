@@ -10,26 +10,35 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const unsubscribe = authService.onAuthStateChanged((user) => {
-      setCurrentUser(user);
-      if (user) {
-        const savedRole = localStorage.getItem(`shilpsetu_role_${user.uid}`);
-        setRole(savedRole || authService.getCurrentRole());
-      } else {
-        setRole(null);
-      }
-      setLoading(false);
-    });
-    return unsubscribe;
-  }, []);
+  const unsubscribe = authService.onAuthStateChanged((user) => {
+    setCurrentUser(user);
+
+    if (user) {
+      const savedRole = localStorage.getItem(`shilpsetu_role_${user.uid}`);
+      setRole(savedRole || null);
+    } else {
+      setRole(null);
+    }
+
+    setLoading(false);
+  });
+
+  return unsubscribe;
+}, []);
 
   const login = async (email, password) => {
     setError(null);
     setLoading(true);
     try {
       const result = await authService.signInWithEmail(email, password);
-      const savedRole = localStorage.getItem(`shilpsetu_role_${result.user.uid}`);
-      if (savedRole) setRole(savedRole);
+
+      if (result?.role) {
+        localStorage.setItem(`shilpsetu_role_${result.user.uid}`, result.role);
+        setRole(result.role);
+      } else {
+        setRole(null);
+      }
+
       return result;
     } catch (err) {
       setError(err.message);
@@ -73,6 +82,7 @@ export function AuthProvider({ children }) {
   };
 
   const selectRole = async (selectedRole) => {
+    
     if (currentUser) {
       localStorage.setItem(`shilpsetu_role_${currentUser.uid}`, selectedRole);
     }

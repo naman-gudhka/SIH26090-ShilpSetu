@@ -45,7 +45,7 @@ export function Login() {
     setLoading(true);
     try {
       const result = await login(cleanEmail, password);
-      const role = result?.role || 'artisan';
+      const role = result?.role;
       if (role === 'admin') {
         navigate('/admin');
       } else if (role === 'buyer') {
